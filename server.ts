@@ -5,16 +5,19 @@ import { WebSocketServer } from 'ws';
 import {Client as SSHClient} from 'ssh2'
 
 
-const port = parseInt(process.env.PORT || "3000", 10);
+const port = parseInt(process.env.PORT || "4000", 10);
 const dev = process.env.NODE_ENV !== "production";
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
 app.prepare().then(() => {
-  createServer((req, res) => {
+  const server=createServer((req, res) => {
     const parsedUrl = parse(req.url!, true);
     handle(req, res, parsedUrl);
-  }).listen(port);
+  }
+  
+
+).listen(port);
 
 
 
@@ -73,7 +76,13 @@ wss.on('connection', (ws) => {
 
 
 
-
+// Upgrade the HTTP server to handle WebSocket connections
+server.on('upgrade', (request: any, socket: any, head: any) => {
+  wss.handleUpgrade(request, socket, head, (ws) => {
+      console.log('upgrade')
+      wss.emit('connection', ws, request);
+  });
+});
 
 
 
