@@ -2,7 +2,7 @@ import { createServer } from "http";
 import { parse } from "url";
 import next from "next";
 import { WebSocketServer } from 'ws';
-import {Client} from 'ssh2'
+import {Client as SSHClient} from 'ssh2'
 
 
 const port = parseInt(process.env.PORT || "3000", 10);
@@ -16,26 +16,68 @@ app.prepare().then(() => {
     handle(req, res, parsedUrl);
   }).listen(port);
 
-const conn = new Client();
-conn.on('ready', () => {
-  console.log('Client :: ready');
-  conn.exec('uptime', (err, stream) => {
-    if (err) throw err;
-    stream.on('close', (code: string, signal: string) => {
-      console.log('Stream :: close :: code: ' + code + ', signal: ' + signal);
-      conn.end();
-    }).on('data', (data: string) => {
-      console.log('STDOUT: ' + data);
-    }).stderr.on('data', (data) => {
-      console.log('STDERR: ' + data);
+
+
+// Create a WebSocket server
+const wss = new WebSocketServer({ noServer: true });
+
+// Handle WebSocket connections
+wss.on('connection', (ws) => {
+    console.log('New WebSocket connection established.');
+
+    // Create an SSH client
+    const sshClient = new SSHClient();
+
+    // Connect to the SSH server
+    sshClient.on('ready', () => {
+        console.log('SSH Client: Connection established.');
+
+        // Start a shell session
+        sshClient.shell((err, stream) => {
+            if (err) throw err;
+
+            // Handle data from the SSH stream
+            stream.on('data', (data:any) => {
+                console.log(`SSH Data: ${data}`);
+                // Send SSH output back to WebSocket clients
+                ws.send(data.toString());
+            });
+
+            // Handle input from WebSocket clients and send to SSH shell
+            ws.on('message', (message: string) => {
+                console.log(`Received from WebSocket: ${message}`);
+                stream.write(message); // Send to SSH shell
+            });
+
+            // Handle WebSocket close event
+            ws.on('close', () => {
+                console.log('WebSocket connection closed.');
+                sshClient.end(); // Close the SSH connection
+            });
+        });
+    }).connect({
+        host: '192.168.1.77', // SSH server address
+        port: 22,                // SSH port
+        username: 'zhaos', // SSH username
+        password: '123456'  // SSH password
+        // You can also use privateKey instead of password if needed
     });
-  });
-}).connect({
-  host: '192.168.1.77',
-  port: 22,
-  username: 'zhaos',
-  password:'123456'
+
+    // Handle SSH errors
+    sshClient.on('error', (err) => {
+        console.error(`SSH Client Error: ${err}`);
+        ws.send('Error connecting to SSH server.');
+        ws.close();
+    });
 });
+
+
+
+
+
+
+
+
   console.log(
     `> Server listening at http://localhost:${port} as ${
       dev ? "development" : process.env.NODE_ENV

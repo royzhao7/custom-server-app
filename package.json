@@ -6,6 +6,7 @@
     "start": "cross-env NODE_ENV=production node dist/server.js"
   },
   "dependencies": {
+    "@xterm/xterm": "^5.5.0",
     "cross-env": "^7.0.3",
     "next": "latest",
     "react": "^18.2.0",
