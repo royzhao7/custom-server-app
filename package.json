@@ -3,7 +3,8 @@
   "scripts": {
     "dev": "nodemon",
     "build": "next build && tsc --project tsconfig.server.json",
-    "start": "cross-env NODE_ENV=production node dist/server.js"
+    "start": "cross-env NODE_ENV=production node dist/server.js",
+    "lint": "next lint"
   },
   "dependencies": {
     "@types/express": "^5.0.0",
@@ -14,6 +15,8 @@
     "next": "latest",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "ssh2": "^1.16.0",
     "ws": "^8.18.0"
   },
